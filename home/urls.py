@@ -36,6 +36,7 @@ urlpatterns = [
 
     # ✅ Add missing CCTV stream route
     path('cctv-stream/', views.cctv_stream, name='cctv_stream'),
+    
 ]
 
 # ✅ Serve static and media files in development mode

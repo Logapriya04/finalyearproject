@@ -110,6 +110,8 @@
             color: white;
             cursor: pointer;
             transition: all 0.3s ease-in-out;
+            width: 80%;
+            text-align: center;
         }
 
         /* Image Styling */
@@ -188,13 +190,11 @@
             }
         }
 
-        function getCSRFToken() {
-            return document.querySelector("[name=csrfmiddlewaretoken]").value;
-        }
-
         function uploadImage() {
             let input = document.getElementById("imageUpload");
             let loadingText = document.getElementById("loadingText");
+            let outputImage = document.getElementById("outputImage");
+            let resultText = document.getElementById("resultText");
 
             if (!input.files.length) {
                 alert("Please select an image first!");
@@ -202,6 +202,7 @@
             }
 
             loadingText.style.display = "block"; // Show loading text
+            resultText.innerText = "Processing...";
 
             let formData = new FormData();
             formData.append("file", input.files[0]);
@@ -209,17 +210,20 @@
             fetch("{% url 'home:detect_ambulance' %}", {
                 method: "POST",
                 body: formData,
-                headers: { "X-CSRFToken": getCSRFToken() }
+                headers: { "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value }
             })
             .then(response => response.json())
             .then(data => {
                 loadingText.style.display = "none"; // Hide loading text
-                document.getElementById("resultText").innerText = data.message;
+                resultText.innerText = data.message || "Detection complete.";
 
                 if (data.detected && data.output_image) {
-                    document.getElementById("outputImage").src = data.output_image;
-                    document.getElementById("outputImage").style.display = "block";
+                    outputImage.src = data.output_image;
+                    outputImage.style.display = "block";
                     alert("🚨 Ambulance Detected! 🚨");
+                } else {
+                    outputImage.style.display = "none";
+                    alert("No ambulance detected.");
                 }
             })
             .catch(error => {
@@ -234,7 +238,7 @@
         }
     </script>
 
-    <!-- CSRF Token for AJAX -->
+    <!-- CSRF Token -->
     <form method="post" style="display: none;">
         {% csrf_token %}
     </form>

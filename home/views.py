@@ -7,11 +7,12 @@ from django.shortcuts import render, redirect  # type: ignore
 from django.contrib.auth import authenticate, login, logout  # type: ignore
 from django.contrib import messages  # type: ignore
 from django.contrib.auth.decorators import login_required  # type: ignore
-from django.http import JsonResponse, StreamingHttpResponse  # Added StreamingHttpResponse
+from django.http import JsonResponse, StreamingHttpResponse  # type: ignore # Added StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt  # type: ignore
 from django.core.files.storage import default_storage  # type: ignore
 from .models import CustomUser
 from ultralytics import YOLO  # type: ignore
+
 
 
 # ✅ Load YOLO Model (Ensure `yolov8n.pt` is present)
@@ -184,6 +185,46 @@ def detect_ambulance(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
+def generate_frames():
+    cap = cv2.VideoCapture(0)  # 0 for webcam, replace with CCTV stream URL if needed
+    
+    # Set camera resolution (improves performance)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FPS, 15)  # Reduce FPS for efficiency
+
+    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            print("⚠️ Error: Could not read frame")
+            break
+
+        # 🔍 Run YOLO detection on each frame
+        results = model(frame)
+
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box coordinates
+                conf = box.conf[0].item()  # Confidence score
+                class_id = int(box.cls[0].item())  # Class ID
+                label = model.names[class_id]  # Get class name
+
+                # 🚑 Detect only ambulance-related vehicles
+                if label in ["ambulance", "truck", "bus"]:
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                    cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # Encode frame in JPEG format
+        _, buffer = cv2.imencode('.jpg', frame)
+        frame_bytes = buffer.tobytes()
+
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+    cap.release()
+
+
 # ----------------- IMAGE & VIDEO UPLOAD -----------------
 @csrf_exempt
 def upload_image(request):
@@ -209,14 +250,14 @@ def upload_image(request):
                 confidence = box.conf[0].item()  # Get confidence score
 
                 # ✅ Only detect "ambulance" and ignore other vehicles
-                if label.lower() == "ambulance" and confidence > 0.85:  
+                if label.lower() == "ambulance" and confidence > 0.6:  
                     ambulance_detected = True
                     detected_boxes.append({
                         "x1": int(box.xyxy[0][0]),
                         "y1": int(box.xyxy[0][1]),
                         "x2": int(box.xyxy[0][2]),
                         "y2": int(box.xyxy[0][3]),
-                        "confidence": round(confidence, 0.80),
+                        "confidence": round(confidence, 2),
                         "label": label
                     })
 
