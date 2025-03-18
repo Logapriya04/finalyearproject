@@ -15,7 +15,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    'klp_ambulance_detection_.onrender.com',  # 🔥 Replace with your actual Render URL
+    'trafficpolice_ambulance_detection.onrender.com',  # 🔥 Replace with your actual Render URL
 ]
 
 # ✅ Security Settings (Keep secret key hidden)
@@ -99,7 +99,7 @@ CSRF_COOKIE_SECURE = False  # Change to True in production
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1",
     "http://localhost",
-    "https://klp_ambulance_detection.onrender.com",  # 🔥 Replace with your actual Render URL
+    "https://trafficpolice_ambulance_detection.onrender.com",  # 🔥 Replace with your actual Render URL
 ]
 
 X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking attacks
