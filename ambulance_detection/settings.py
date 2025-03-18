@@ -123,4 +123,4 @@ AMBULANCE_CLASS_ID = 2  # Adjust according to your YOLO class index
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ✅ Render Port Handling
-PORT = os.getenv("PORT", "8000")
+PORT = int(os.getenv("PORT", 8000))  # Ensure it's an integer
