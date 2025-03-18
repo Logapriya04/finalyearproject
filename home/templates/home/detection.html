@@ -1,32 +1,243 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ambulance Detection</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
-        #upload-section { margin: 20px auto; padding: 20px; background: white; width: 50%; border-radius: 8px; }
-        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
+        /* General Styles */
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1e3c72;
+            color: white;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            width: 100%;
+            background: #162d50;
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .navbar .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+            transform: translateX(-40px);
+        }
+
+        .nav-links li {
+            margin: 0 15px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            transition: 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #ff416c;
+        }
+
+        /* Main Content */
+        .container {
+            margin-top: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        h2, h3 {
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Stylish Buttons */
+        button {
+            background: #ff416c;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 4px 10px rgba(255, 65, 108, 0.3);
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px rgba(255, 65, 108, 0.5);
+        }
+
+        /* CCTV Button */
+        .cctv-btn {
+            background: #4CAF50;
+            margin-top: 20px;
+        }
+
+        /* Input Styling */
+        input[type="file"] {
+            padding: 10px;
+            border: 2px solid white;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+        }
+
+        /* Image Styling */
+        img {
+            border: 2px solid white;
+            margin-top: 20px;
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Loader Styling */
+        .loader {
+            display: none;
+            margin-top: 10px;
+            color: #ff416c;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
-    <div id="upload-section">
-        <h2>Upload an Image for Detection</h2>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Detect</button>
-        </form>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="{% url 'home:main' %}" class="logo">🚑 Ambulance Detection</a>
+        <ul class="nav-links">
+            <li><a href="{% url 'home:main' %}">Home</a></li>
+            <li><a href="#upload-section">Upload</a></li>
+            <li><a href="#result-section">Results</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h2>🚑 Ambulance Detection 🚑</h2>
+
+        <!-- Upload Section -->
+        <section id="upload-section">
+            <h3>Upload an Image for Detection</h3>
+            <input type="file" id="imageUpload" accept="image/*" onchange="previewImage()">
+            <br><br>
+            <button onclick="uploadImage()">Detect Ambulance</button>
+
+            <!-- Loader -->
+            <div class="loader" id="loadingText">Processing...</div>
+
+            <h3>Preview</h3>
+            <img id="previewImage" style="display:none;">
+        </section>
+
+        <!-- CCTV Streaming Button -->
+        <section>
+            <h3>Real-Time Detection</h3>
+            <button class="cctv-btn" onclick="startCCTV()">🚨 Start CCTV Streaming</button>
+        </section>
+
+        <!-- Result Section -->
+        <section id="result-section">
+            <h3>Detection Result</h3>
+            <p id="resultText">No detection yet.</p>
+            <img id="outputImage" style="display:none;">
+        </section>
     </div>
 
-    <h3>OR</h3>
-    
-    <button onclick="startLiveDetection()">Start Live Detection</button>
-
     <script>
-        function startLiveDetection() {
-            window.open('/live-detection', '_blank');
+        function previewImage() {
+            let input = document.getElementById("imageUpload");
+            let preview = document.getElementById("previewImage");
+
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function getCSRFToken() {
+            return document.querySelector("[name=csrfmiddlewaretoken]").value;
+        }
+
+        function uploadImage() {
+            let input = document.getElementById("imageUpload");
+            let loadingText = document.getElementById("loadingText");
+
+            if (!input.files.length) {
+                alert("Please select an image first!");
+                return;
+            }
+
+            loadingText.style.display = "block"; // Show loading text
+
+            let formData = new FormData();
+            formData.append("file", input.files[0]);
+
+            fetch("{% url 'home:detect_ambulance' %}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-CSRFToken": getCSRFToken() }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingText.style.display = "none"; // Hide loading text
+                document.getElementById("resultText").innerText = data.message;
+
+                if (data.detected && data.output_image) {
+                    document.getElementById("outputImage").src = data.output_image;
+                    document.getElementById("outputImage").style.display = "block";
+                    alert("🚨 Ambulance Detected! 🚨");
+                }
+            })
+            .catch(error => {
+                loadingText.style.display = "none"; // Hide loading text
+                console.error("Error:", error);
+                alert("Error detecting ambulance. Please try again.");
+            });
+        }
+
+        function startCCTV() {
+            window.location.href = "{% url 'home:cctv_stream' %}";
         }
     </script>
+
+    <!-- CSRF Token for AJAX -->
+    <form method="post" style="display: none;">
+        {% csrf_token %}
+    </form>
+
 </body>
 </html>

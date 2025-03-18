@@ -1,76 +1,58 @@
 import os
-import cv2
-import torch
-import numpy as np
-import threading
-from pathlib import Path
-from django.conf import settings
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, StreamingHttpResponse
-from django.core.files.storage import default_storage
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.staticfiles import finders
-from playsound import playsound # type: ignore
+import torch  # type: ignore
+import numpy as np  # type: ignore
+import cv2  # type: ignore
+from django.conf import settings  # type: ignore
+from django.shortcuts import render, redirect  # type: ignore
+from django.contrib.auth import authenticate, login, logout  # type: ignore
+from django.contrib import messages  # type: ignore
+from django.contrib.auth.decorators import login_required  # type: ignore
+from django.http import JsonResponse, StreamingHttpResponse  # Added StreamingHttpResponse
+from django.views.decorators.csrf import csrf_exempt  # type: ignore
+from django.core.files.storage import default_storage  # type: ignore
 from .models import CustomUser
-from .yolo_utils import load_yolo_model
+from ultralytics import YOLO  # type: ignore
 
 
-# ✅ Home Page
+# ✅ Load YOLO Model (Ensure `yolov8n.pt` is present)
+model_path = os.path.join(settings.BASE_DIR, "yolov8n.pt")
+if not os.path.exists(model_path):
+    raise FileNotFoundError("⚠️ YOLO model not found! Download `yolov8n.pt` and place it in the project folder.")
+
+model = YOLO(model_path)  # Load YOLOv8 model
+
+
+# ----------------- STATIC PAGES -----------------
 def index(request):
-    return render(request, "home/index.html")
+    return render(request, 'home/index.html')
 
-# ✅ Other Basic Views
-def main(request):
-    return render(request, "home/main.html")
-
-def about(request):
-    return render(request, "home/about.html")
 
 def how_it_works(request):
-    return render(request, "home/how_it_works.html")
+    return render(request, 'home/how_it_works.html')
 
-def contact(request):
-    return render(request, "home/contact.html")
+
+def about(request):
+    return render(request, 'home/about.html')
+
+
+@login_required(login_url='home:login')
+def detection(request):
+    return render(request, 'home/detection.html')
+
 
 def service(request):
-    return render(request, "home/service.html")  # Ensure "service.html" exists
+    return redirect('https://www.vanjinathanambulanceservice.com/')
 
-# ✅ Help Page (Chatbot)
+
+def contact(request):
+    return render(request, 'home/contact.html')
+
+
 def help_view(request):
-    return render(request, "home/help.html")  # Ensure help.html exists in templates/home/
-
-# ✅ Detection Page
-def detection_page(request):
-    return render(request, "home/detection.html")  # Ensure detection.html exists
+    return render(request, 'home/help.html')
 
 
-model = load_yolo_model()
-
-# ✅ Load YOLO Model
-MODEL_PATH = Path(settings.BASE_DIR) / "home" / "yolo_model.pt"
-
-if not MODEL_PATH.exists():
-    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-
-try:
-    model = torch.hub.load("ultralytics/yolov5", "custom", path=str(MODEL_PATH), force_reload=True)
-    model.eval()
-except Exception as e:
-    raise RuntimeError(f"Error loading YOLO model: {e}")
-
-# ✅ Sound Alert Function
-def play_alert_sound():
-    sound_path = finders.find("sounds/alarm.mp3")
-    if sound_path:
-        threading.Thread(target=playsound, args=(sound_path,), daemon=True).start()
-    else:
-        print("❌ Alert sound file not found!")
-
-# ✅ Authentication
-@csrf_exempt
+# ----------------- USER AUTHENTICATION -----------------
 def register(request):
     if request.method == "POST":
         username = request.POST.get('username', '').strip()
@@ -79,159 +61,220 @@ def register(request):
         password2 = request.POST.get('password2', '').strip()
 
         if not all([username, email, password1, password2]):
-            return JsonResponse({"error": "All fields are required."}, status=400)
+            messages.error(request, "All fields are required.")
+            return redirect('home:register')
 
         if password1 != password2:
-            return JsonResponse({"error": "Passwords do not match!"}, status=400)
+            messages.error(request, "Passwords do not match!")
+            return redirect('home:register')
 
         if CustomUser.objects.filter(username=username).exists():
-            return JsonResponse({"error": "Username already exists!"}, status=400)
+            messages.error(request, "Username already exists! Please log in.")
+            return redirect('home:login')
 
         if CustomUser.objects.filter(email=email).exists():
-            return JsonResponse({"error": "Email is already registered!"}, status=400)
+            messages.error(request, "Email is already registered! Please log in.")
+            return redirect('home:login')
 
         try:
             user = CustomUser.objects.create_user(username=username, email=email, password=password1)
             user.save()
         except Exception as e:
-            return JsonResponse({"error": f"Error creating user: {e}"}, status=500)
+            messages.error(request, f"Error creating user: {e}")
+            return redirect('home:register')
 
         user = authenticate(request, username=username, password=password1)
         if user:
             login(request, user)
-            return JsonResponse({"message": "✅ Registration successful!"})
+            messages.success(request, "✅ Registration successful!")
+            return redirect('home:main')
         else:
-            return JsonResponse({"error": "Authentication failed. Please log in manually."}, status=400)
+            messages.error(request, "Authentication failed. Please log in manually.")
+            return redirect('home:login')
 
-    return JsonResponse({"error": "Invalid request method."}, status=400)
+    return render(request, 'home/register.html')
 
-@csrf_exempt
+
 def user_login(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "").strip()
 
         if not username or not password:
-            return JsonResponse({"error": "Username and password are required."}, status=400)
+            messages.error(request, "Username and password are required.")
+            return redirect("home:login")
 
         user = authenticate(request, username=username, password=password)
+
         if user:
             login(request, user)
-            return JsonResponse({"message": "✅ Login successful!"})
+            messages.success(request, "✅ Login successful!")
+            return redirect("home:main")
         else:
-            return JsonResponse({"error": "❌ Invalid username or password."}, status=400)
+            messages.error(request, "❌ Invalid username or password.")
+            return redirect("home:login")
 
-    return JsonResponse({"error": "Invalid request method."}, status=400)
+    return render(request, "home/login.html")
 
-@login_required(login_url='home:login')
+
 def user_logout(request):
     logout(request)
-    return JsonResponse({"message": "✅ You have successfully logged out."})
+    messages.success(request, "You have successfully logged out.")
+    return redirect("home:index")
+
+
+@login_required(login_url='home:login')
+def main(request):
+    return render(request, "home/main.html")
+
+
+# ----------------- AMBULANCE DETECTION -----------------
+@csrf_exempt
+def detect_ambulance(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        uploaded_file = request.FILES["file"]
+        file_path = default_storage.save(f"uploads/{uploaded_file.name}", uploaded_file)
+
+        # Get absolute path of the saved file
+        image_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+        # Load the image
+        image = cv2.imread(image_path)
+        if image is None:
+            return JsonResponse({"error": "Invalid image file"}, status=400)
+
+        # 🔍 Run YOLOv8 Detection
+        results = model(image)
+
+        # ✅ Extract detected objects
+        detected_objects = []
+        ambulance_detected = False  # Flag for detection
+
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])  # Get bounding box
+                conf = box.conf[0].item()  # Confidence score
+                class_id = int(box.cls[0].item())  # Class ID
+                label = model.names[class_id]  # Get class name
+
+                detected_objects.append({"label": label, "confidence": conf, "bbox": [x1, y1, x2, y2]})
+
+                # 🚑 Check for possible ambulance classes
+                if label in ["truck", "car", "bus"]:
+                    ambulance_detected = True  # Flag as detected
+                    cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Draw bounding box
+                    cv2.putText(image, f"Ambulance? {conf:.2f}", (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # Ensure the processed directory exists
+        processed_dir = os.path.join(settings.MEDIA_ROOT, "processed")
+        os.makedirs(processed_dir, exist_ok=True)
+
+        # Save processed image
+        processed_image_path = os.path.join(processed_dir, uploaded_file.name)
+        cv2.imwrite(processed_image_path, image)
+
+        return JsonResponse({
+            "detected": ambulance_detected,
+            "output_image": settings.MEDIA_URL + f"processed/{uploaded_file.name}",
+            "message": "✅ Possible Ambulance detected!" if ambulance_detected else "❌ No Ambulance detected.",
+            "detections": detected_objects
+        })
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+# ----------------- IMAGE & VIDEO UPLOAD -----------------
+@csrf_exempt
+def upload_image(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        file = request.FILES["file"]
+        file_path = default_storage.save(f"uploads/{file.name}", file)
+        image_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+        # Load the image
+        image = cv2.imread(image_path)
+
+        # Run YOLO detection
+        results = model(image)
+
+        # Check for ambulance detection (Filtering by class ID)
+        ambulance_detected = False
+        detected_boxes = []
+
+        for result in results:
+            for box in result.boxes:
+                class_id = int(box.cls[0].item())  # Get class ID
+                label = model.names[class_id]  # Get class label
+                confidence = box.conf[0].item()  # Get confidence score
+
+                # ✅ Only detect "ambulance" and ignore other vehicles
+                if label.lower() == "ambulance" and confidence > 0.85:  
+                    ambulance_detected = True
+                    detected_boxes.append({
+                        "x1": int(box.xyxy[0][0]),
+                        "y1": int(box.xyxy[0][1]),
+                        "x2": int(box.xyxy[0][2]),
+                        "y2": int(box.xyxy[0][3]),
+                        "confidence": round(confidence, 0.80),
+                        "label": label
+                    })
+
+        return JsonResponse({
+            "detected": ambulance_detected,
+            "boxes": detected_boxes,
+            "message": "🚑 Ambulance Detected!" if ambulance_detected else "No Ambulance Found."
+        })
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
 
 
 @csrf_exempt
 def upload_video(request):
-    if request.method == "POST" and request.FILES.get("video"):
-        video = request.FILES["video"]
-        file_path = os.path.join(settings.MEDIA_ROOT, "videos", video.name)
-
-        with default_storage.open(file_path, "wb") as dest:
-            for chunk in video.chunks():
-                dest.write(chunk)
-
-        return JsonResponse({"message": "✅ Video uploaded successfully!", "file_path": file_path})
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-
-# ✅ Upload Image API
-@csrf_exempt
-def upload_image(request):
-    if request.method == "POST" and request.FILES.get("image"):
-        image = request.FILES["image"]
-        file_path = os.path.join(settings.MEDIA_ROOT, "uploads", image.name)
-
-        with default_storage.open(file_path, "wb") as dest:
-            for chunk in image.chunks():
-                dest.write(chunk)
-
-        return JsonResponse({"message": "✅ Image uploaded successfully!", "file_path": file_path})
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-# ✅ Detect Ambulance API
-@csrf_exempt
-def detect_ambulance(request):
     if request.method == "POST" and request.FILES.get("file"):
-        try:
-            file = request.FILES["file"]
-            image = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
-            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        uploaded_file = request.FILES["file"]
+        file_path = default_storage.save(f"uploads/{uploaded_file.name}", uploaded_file)
+        return JsonResponse({"message": "File uploaded successfully!", "file_path": settings.MEDIA_URL + file_path})
 
-            model = load_yolo_model()
-            if model is None:
-                return JsonResponse({"error": "YOLO model failed to load."}, status=500)
+    return JsonResponse({"error": "Invalid request"}, status=400)
 
-            results = model(image_rgb)
-            detections = results.pandas().xyxy[0]
-            detected = False
 
-            for _, row in detections.iterrows():
-                label = row["name"]
-                confidence = row["confidence"]
 
-                if label.lower() == "ambulance" and confidence > 0.3:
-                    detected = True
-                    x1, y1, x2, y2 = int(row["xmin"]), int(row["ymin"]), int(row["xmax"]), int(row["ymax"])
-                    cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 3)
-                    cv2.putText(image, "Ambulance Detected", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-
-            output_filename = "detected_output.jpg"
-            output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
-            cv2.imwrite(output_path, image)
-
-            if detected:
-                play_alert_sound()
-                return JsonResponse({
-                    "detected": True,
-                    "message": "🚑 Ambulance detected! Alert triggered.",
-                    "output_image": settings.MEDIA_URL + output_filename
-                })
-            else:
-                return JsonResponse({"detected": False, "message": "No ambulance detected."})
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid Request"}, status=400)
-
-# ✅ CCTV Streaming
+# ----------------- CCTV STREAM FUNCTION -----------------
 def generate_frames():
-    cap = cv2.VideoCapture(0)
-    try:
-        while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
-                break
+    cap = cv2.VideoCapture(0)  # Open webcam (or use a CCTV stream URL)
 
-            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            model = load_yolo_model()
-            if model:
-                results = model(image_rgb)
-                for *xyxy, conf, cls in results.xyxy[0]:
-                    label = model.names[int(cls)]
-                    if label == "ambulance":
-                        cv2.rectangle(frame, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), (0, 255, 0), 2)
-                        play_alert_sound()
+    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            break
 
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-    finally:
-        cap.release()
+        # 🔍 Run YOLO detection on each frame
+        results = model(frame)
+
+        # 🚑 Draw bounding boxes for detected ambulances
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                conf = box.conf[0].item()
+                class_id = int(box.cls[0].item())
+                label = model.names[class_id]
+
+                # If detected object is a possible ambulance
+                if label in ["truck", "car", "bus"]:
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                    cv2.putText(frame, f"Ambulance? {conf:.2f}", (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # Encode the frame in JPEG format
+        _, buffer = cv2.imencode('.jpg', frame)
+        frame_bytes = buffer.tobytes()
+
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+    cap.release()
+
 
 def cctv_stream(request):
     return StreamingHttpResponse(generate_frames(), content_type="multipart/x-mixed-replace; boundary=frame")
-
-def yolo_detection(request):
-    return JsonResponse({"message": "🚀 YOLO detection endpoint is working!"})

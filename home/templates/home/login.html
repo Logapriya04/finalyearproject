@@ -46,6 +46,7 @@
             padding: 0;
             margin-bottom: 20px;
             text-align: center;
+
         }
 
         .messages li {
@@ -178,6 +179,7 @@
 <!-- ✅ ADD MESSAGE DISPLAY -->
 {% if messages %}
     <ul class="messages">
+        
         {% for message in messages %}
             <li class="{{ message.tags }}">{{ message }}</li>
         {% endfor %}
