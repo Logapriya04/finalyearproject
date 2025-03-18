@@ -28,15 +28,14 @@ urlpatterns = [
     # ✅ Help Page (Chatbot)
     path('help/', views.help_view, name='help'),
 
-    # ✅ Detection Page & APIs
+    # ✅ Ambulance Detection (Image/Video)
     path("detection/", views.detection, name='detection'),
-    path('detect-image/', views.detect_ambulance, name='detect_ambulance'),
+    path('detect-ambulance/', views.detect_ambulance, name='detect_ambulance'),
     path('upload-image/', views.upload_image, name='upload_image'),
     path('upload-video/', views.upload_video, name='upload_video'),
 
-    # ✅ Add missing CCTV stream route
+    # ✅ Live CCTV Streaming
     path('cctv-stream/', views.cctv_stream, name='cctv_stream'),
-    
 ]
 
 # ✅ Serve static and media files in development mode

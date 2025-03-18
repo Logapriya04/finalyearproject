@@ -7,8 +7,9 @@
     {% load static %}
     <style>
         body {
-            background: url('{% static "images/background.jpg" %}') no-repeat center center/cover;
-            height: 100vh;
+            background: url('{% static "images/background.jpg" %}') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,6 +18,7 @@
             text-align: center;
             color: white;
         }
+
 
         .title {
             font-size: 52px;
