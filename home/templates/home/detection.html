@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ambulance Detection & Smart Traffic Control</title>
+    <title>Ambulance Detection</title>
     <style>
-        /* General Styles */
         body {
             text-align: center;
             font-family: Arial, sans-serif;
@@ -18,8 +17,6 @@
             background-color: #1e3c72;
             color: white;
         }
-
-        /* Navigation Bar */
         .navbar {
             width: 100%;
             background: #162d50;
@@ -31,42 +28,32 @@
             left: 0;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             z-index: 1000;
-            flex-wrap: wrap;
         }
-
         .navbar .logo {
             font-size: 22px;
             font-weight: bold;
             color: white;
             text-decoration: none;
         }
-
         .nav-links {
             list-style: none;
             display: flex;
             margin: 0;
             padding: 0;
-            flex-wrap: wrap;
             transform: translateX(-40px);
         }
-
         .nav-links li {
-            margin: 0 10px;
+            margin: 0 15px;
         }
-
         .nav-links a {
             color: white;
             text-decoration: none;
-            font-size: 16px;
+            font-size: 18px;
             transition: 0.3s;
-            padding: 10px;
         }
-
         .nav-links a:hover {
             color: #ff416c;
         }
-
-        /* Main Content */
         .container {
             margin-top: 120px;
             display: flex;
@@ -75,12 +62,6 @@
             width: 90%;
             max-width: 600px;
         }
-
-        h2, h3 {
-            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
-        }
-
-        /* Buttons */
         button {
             background: #ff416c;
             color: white;
@@ -90,166 +71,51 @@
             border-radius: 25px;
             cursor: pointer;
             transition: all 0.3s ease-in-out;
-            box-shadow: 0 4px 10px rgba(255, 65, 108, 0.3);
-            width: 90%;
-            max-width: 250px;
+            margin: 5px;
         }
-
         button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 15px rgba(255, 65, 108, 0.5);
+            transform: scale(1.1);
         }
-
-        /* CCTV Button */
-        .cctv-btn {
-            background: #4CAF50;
-            margin-top: 20px;
-        }
-
-        /* Input Styling */
-        input[type="file"] {
-            padding: 10px;
-            border: 2px solid white;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            cursor: pointer;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        /* Image Styling */
         img {
             border: 2px solid white;
             margin-top: 20px;
             max-width: 100%;
-            height: auto;
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.3);
         }
-
-        /* Loader Styling */
         .loader {
             display: none;
             margin-top: 10px;
             color: #ff416c;
             font-size: 16px;
         }
-
-        /* Live Detection Video */
-        .live-detection {
-            display: none;
-            margin-top: 20px;
-        }
-
-        .live-detection img {
-            border: 3px solid #ff416c;
-            width: 90%;
-            max-width: 640px;
-            height: auto;
-        }
-
-        /* Automated Alerts */
-        .alert {
-            display: none;
-            background: red;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 18px;
-            margin-top: 20px;
-        }
-
-        /* GPS Tracking */
-        .gps {
-            margin-top: 20px;
-            font-size: 16px;
-            color: yellow;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .navbar {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .nav-links {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .nav-links li {
-                margin: 5px 0;
-            }
-
-            button {
-                font-size: 14px;
-                padding: 10px 15px;
-            }
-
-            .container {
-                margin-top: 140px;
-                width: 95%;
-            }
-        }
     </style>
 </head>
 <body>
-
-    <!-- Navigation Bar -->
     <nav class="navbar">
-        <a href="{% url 'home:main' %}" class="logo">🚑 Smart Ambulance Detection</a>
+        <a href="main.html" class="logo">🚑 Ambulance Detection</a>
         <ul class="nav-links">
             <li><a href="{% url 'home:main' %}">Home</a></li>
             <li><a href="#upload-section">Upload</a></li>
-            <li><a href="#result-section">Results</a></li>
+            <li><a href="#result-section">Results</a></li> 
         </ul>
     </nav>
 
     <div class="container">
-        <h2>🚑 Smart Ambulance Detection & Traffic Control 🚦</h2>
-
-        <!-- Automated Alert -->
-        <div class="alert" id="alertBox">🚨 Ambulance Detected! 🚨</div>
-
-        <!-- Upload Section -->
+        <h2>🚑 Ambulance Detection 🚑</h2>
         <section id="upload-section">
             <h3>Upload an Image for Detection</h3>
             <input type="file" id="imageUpload" accept="image/*" onchange="previewImage()">
             <br><br>
             <button onclick="uploadImage()">Detect Ambulance</button>
-
-            <!-- Loader -->
+            <button onclick="startCCTVDetection()">Live CCTV Detection</button>
             <div class="loader" id="loadingText">Processing...</div>
-
             <h3>Preview</h3>
             <img id="previewImage" style="display:none;">
         </section>
-
-        <!-- CCTV Streaming Button -->
-        <section>
-            <h3>Real-Time Detection</h3>
-            <button class="cctv-btn" onclick="startCCTV()">🚨 Start CCTV Streaming</button>
-
-            <!-- Live Detection Video -->
-            <div class="live-detection" id="liveDetection">
-                <h3>Live Ambulance Detection</h3>
-                <img id="video" src="{% url 'home:cctv_stream' %}">
-            </div>
-        </section>
-
-        <!-- GPS Tracking -->
-        <section class="gps">
-            <h3>📍 GPS & Location Tracking</h3>
-            <p id="gpsLocation">Current Location: Searching...</p>
-        </section>
-
-        <!-- Traffic Signal Control -->
-        <section>
-            <h3>🚦 Traffic Signal Control</h3>
-            <p>🔴🟡🟢 Signal Adjustments Based on Detection</p>
+        <section id="result-section">
+            <h3>Detection Result</h3>
+            <p id="resultText">No detection yet.</p>
+            <img id="outputImage" style="display:none;">
         </section>
     </div>
 
@@ -257,7 +123,6 @@
         function previewImage() {
             let input = document.getElementById("imageUpload");
             let preview = document.getElementById("previewImage");
-
             if (input.files && input.files[0]) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
@@ -268,10 +133,42 @@
             }
         }
 
-        function startCCTV() {
-            document.getElementById("liveDetection").style.display = "block";
+        function uploadImage() {
+            let input = document.getElementById("imageUpload");
+            let loadingText = document.getElementById("loadingText");
+            if (!input.files.length) {
+                alert("Please select an image first!");
+                return;
+            }
+            loadingText.style.display = "block";
+            let formData = new FormData();
+            formData.append("file", input.files[0]);
+            fetch("{% url 'home:detect_ambulance' %}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingText.style.display = "none";
+                document.getElementById("resultText").innerText = data.message;
+                if (data.detected && data.output_image) {
+                    document.getElementById("outputImage").src = data.output_image;
+                    document.getElementById("outputImage").style.display = "block";
+                    alert("🚨 Ambulance Detected! 🚨");
+                }
+            })
+            .catch(error => {
+                loadingText.style.display = "none";
+                alert("Error detecting ambulance. Please try again.");
+            });
+        }
+
+        function startCCTVDetection() {
+            let outputImage = document.getElementById("outputImage");
+            outputImage.src = "/cctv-detect/";  // Matches URL in `urls.py`
+            outputImage.style.display = "block";
         }
     </script>
-
 </body>
 </html>

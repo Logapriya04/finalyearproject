@@ -18,14 +18,7 @@
         body {
             background: url('{% static "images/background.jpg" %}') no-repeat center center fixed;
             background-size: cover;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             position: relative;
-            text-align: center;
-            color: white;
         }
 
         body::before {
@@ -197,10 +190,12 @@
 
     <!-- Live Demo (Optional) -->
     <section class="live-demo">
-        <h2>Demo</h2>
-        <img src="{% static 'images/Successful-detection-of-an-ambulance-in-traffic.png' %}" alt="Demo Image" style="max-width: 100%; height: auto;">
+        <h2>Live Demo</h2>
+        <video controls>
+            <source src="{% static 'home/demo.mp4' %}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
     </section>
-
 
     <!-- Testimonials -->
     <section class="testimonials">

@@ -3,6 +3,7 @@ from django.contrib import admin  # Admin panel
 from django.conf import settings  # Access settings
 from django.conf.urls.static import static  # Serve static & media files
 from . import views  # Import views
+from .views import cctv_detect_ambulance
 
 app_name = 'home'  # Namespace for URL reversal
 
@@ -28,14 +29,12 @@ urlpatterns = [
     # ✅ Help Page (Chatbot)
     path('help/', views.help_view, name='help'),
 
-    # ✅ Ambulance Detection (Image/Video)
+    # ✅ Detection Page & APIs
     path("detection/", views.detection, name='detection'),
-    path('detect-ambulance/', views.detect_ambulance, name='detect_ambulance'),
+    path('detect-image/', views.detect_ambulance, name='detect_ambulance'),
     path('upload-image/', views.upload_image, name='upload_image'),
     path('upload-video/', views.upload_video, name='upload_video'),
-
-    # ✅ Live CCTV Streaming
-    path('cctv-stream/', views.cctv_stream, name='cctv_stream'),
+    path("cctv_detect/", views.cctv_detect_ambulance, name="cctv_detect_ambulance"),
 ]
 
 # ✅ Serve static and media files in development mode
